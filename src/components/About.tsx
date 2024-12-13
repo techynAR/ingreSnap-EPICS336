@@ -52,10 +52,7 @@ const About = () => {
             Our Commitment
           </h3>
           <p className="text-gray-400 text-center max-w-3xl mx-auto">
-            ingreSnap is and will always be free to use. We're committed to helping
-            500+ daily users make better health decisions through ingredient
-            transparency. No hidden fees, no restrictions - just pure value for our
-            community.
+            At ingreSnap, our goal is to help create a community of health-conscious individuals by promoting awareness about the ingredients in everyday products. We strive to encourage healthier choices by providing transparent, reliable information, and empowering users to make informed decisions about what they consume.
           </p>
         </div>
       </div>
