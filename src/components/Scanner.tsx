@@ -1,5 +1,5 @@
-import React from 'react';
-import { Upload, Scan, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, Scan, AlertCircle, Camera } from 'lucide-react';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import IngredientAnalysis from './IngredientAnalysis';
 
@@ -13,6 +13,28 @@ const Scanner = () => {
     error, 
     handleImageUpload 
   } = useImageUpload();
+
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  };
 
   return (
     <section id="get-started" className="min-h-screen bg-gray-900 py-20">
@@ -32,12 +54,23 @@ const Scanner = () => {
             <div className="mb-8">
               <label
                 htmlFor="image-upload"
-                className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer hover:border-emerald-500 transition-colors"
+                className={`flex flex-col items-center justify-center w-full h-64 border-2 ${
+                  dragActive ? 'border-emerald-500' : 'border-gray-600'
+                } border-dashed rounded-lg cursor-pointer hover:border-emerald-500 transition-colors relative`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-12 h-12 text-gray-400 mb-4" />
-                  <p className="text-sm text-gray-400">
-                    <span className="font-semibold">Click to upload</span> or drag and drop
+                  {loading ? (
+                    <Scan className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
+                  ) : (
+                    <Camera className="w-12 h-12 text-gray-400 mb-4" />
+                  )}
+                  <p className="text-sm text-gray-400 text-center">
+                    <span className="font-semibold">Click to upload</span> or drag and drop<br />
+                    <span className="text-xs">Supported formats: JPG, PNG, GIF (max 10MB)</span>
                   </p>
                 </div>
                 <input
@@ -46,23 +79,16 @@ const Scanner = () => {
                   className="hidden"
                   accept="image/*"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                  disabled={loading}
                 />
               </label>
             </div>
 
-            {/* Loading State */}
-            {loading && (
-              <div className="text-center">
-                <Scan className="w-8 h-8 text-emerald-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-400">Processing image...</p>
-              </div>
-            )}
-
             {/* Error State */}
             {error && (
-              <div className="flex items-center gap-2 text-red-500 justify-center mb-4">
-                <AlertCircle className="w-5 h-5" />
-                <p>{error}</p>
+              <div className="flex items-center gap-2 text-red-500 justify-center mb-4 p-4 bg-red-500/10 rounded-lg">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">{error}</p>
               </div>
             )}
 
