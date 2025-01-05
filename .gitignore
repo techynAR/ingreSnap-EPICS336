@@ -1,3 +1,83 @@
 node_modules
 dist
 .DS_Store
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+/build
+/dist
+
+# Temporary files and directories
+*.tmp
+*.temp
+.DS_Store
+*.swp
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# macOS specific files
+.Spotlight-V100
+.Trashes
+
+# IDE specific files
+.idea/
+.vscode/
+*.code-workspace
+
+# Package manager files
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+
+# Coverage directory
+coverage/
+
+# Lint/formatter directories and files
+.eslintcache
+.stylelintcache
+.prettierignore
+.prettiercache
+
+# Testing-related files
+jest-cache/
+jest-config/
+
+# Static assets cache
+.cache/
+.next/
+
+# Generated files
+*.gz
+*.map
+
+# React Native specific
+.expo/
+.expo-shared/
+
+# Others
+*.sqlite
+*.tgz
+*.log.*
