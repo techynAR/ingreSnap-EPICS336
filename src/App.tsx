@@ -3,7 +3,6 @@ import Navigation from './components/Navigation';
 import Hero from './components/Hero';
 import Scanner from './components/Scanner';
 import About from './components/About';
-import Contact from './components/Contact';
 
 function App() {
   return (
@@ -13,7 +12,6 @@ function App() {
         <Hero />
         <Scanner />
         <About />
-        <Contact />
       </main>
     </div>
   );
