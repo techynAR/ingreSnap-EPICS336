@@ -19,7 +19,8 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1",
     "react-router-dom": "^6.22.3",
-    "framer-motion": "^11.0.8"
+    "framer-motion": "^11.0.8",
+    "react-helmet-async": "^2.0.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
