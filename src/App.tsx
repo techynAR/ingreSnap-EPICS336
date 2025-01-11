@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { Analytics } from "@vercel/analytics/react"; // Add this import
 import Navigation from './components/Navigation';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
@@ -19,6 +20,7 @@ function App() {
               <Route path="/scanner" element={<ScannerPage />} />
             </Routes>
           </main>
+          <Analytics /> {/* Add the Analytics component */}
         </div>
       </Router>
     </HelmetProvider>
