@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { createWorker } from 'tesseract.js';
+import { createWorker, createScheduler, PSM, OEM } from 'tesseract.js';
 import { processText } from '@/services/analysis';
 import type { AnalysisResult } from '@/types/ingredients';
+import { preprocessOcrText } from '@/utils/textCleaning';
 
 export const useImageUpload = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -40,27 +41,23 @@ export const useImageUpload = () => {
       const imageUrl = URL.createObjectURL(file);
       setImage(imageUrl);
 
-      // Initialize Tesseract worker with progress handling
-      const worker = await createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            // Update loading message based on progress
-            const progress = Math.round(m.progress * 100);
-            if (progress % 20 === 0) { // Update every 20%
-              console.log(`Processing image: ${progress}%`);
-            }
-          }
-        },
+      // Initialize Tesseract worker
+      // Note: In v6, the logger parameter has changed and needs to be a function
+      const worker = await createWorker('eng');
+      
+      // Configure OCR engine for better text recognition
+      await worker.setParameters({
+        tessedit_ocr_engine_mode: OEM.LSTM_ONLY,
+        tessedit_pageseg_mode: PSM.AUTO,
+        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.():;%-_',
+        preserve_interword_spaces: '1'
       });
 
-      // Load and initialize worker
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-
       // Perform OCR
-      const { data: { text } } = await worker.recognize(imageUrl);
+      const { data } = await worker.recognize(imageUrl);
+      const { text } = data;
       
-      // Clean up worker
+      // Clean up resources
       await worker.terminate();
 
       // Validate extracted text
@@ -68,8 +65,11 @@ export const useImageUpload = () => {
         throw new Error('No text could be extracted from the image. Please ensure the image contains clear, readable text.');
       }
 
+      // Preprocess the OCR text to fix common errors
+      const processedText = preprocessOcrText(text);
+
       // Process and analyze the text
-      const results = await processText(text);
+      const results = await processText(processedText);
       
       // Validate results
       if (!results.ingredients || results.ingredients.length === 0) {
