@@ -39,6 +39,11 @@ const HomePage = () => {
             className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] text-center"
           >
             <motion.div variants={fadeIn}>
+              <img 
+                src="/ingresnap-logo.png" 
+                alt="ingreSnap Logo" 
+                className="w-48 h-auto mb-6 mx-auto" 
+              />
               <Lottie
                 loop
                 animationData={healthAnimation}

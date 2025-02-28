@@ -20,6 +20,11 @@ const Hero = () => {
               inView ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`}
           >
+            <img 
+              src="/ingresnap-logo.png" 
+              alt="ingreSnap Logo" 
+              className="w-48 h-auto mb-6 mx-auto" 
+            />
             <Lottie
               loop
               animationData={healthAnimation}

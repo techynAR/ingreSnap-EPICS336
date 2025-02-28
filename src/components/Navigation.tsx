@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Camera } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const Navigation = () => {
@@ -17,9 +17,12 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2 text-white">
-              <Camera className="h-8 w-8 text-emerald-500" />
-              <span className="text-xl font-bold">ingreSnap</span>
+            <Link to="/" className="flex items-center">
+              <img 
+                src="/ingresnap-logo.png" 
+                alt="ingreSnap Logo" 
+                className="h-8 w-auto" 
+              />
             </Link>
           </div>
           <div className="hidden md:block">
