@@ -13,3 +13,29 @@ html {
 body {
   @apply bg-gray-900 text-white;
 }
+
+/* Animation utilities */
+.fade-in {
+  @apply transition-opacity duration-700 ease-in-out;
+}
+
+.slide-up {
+  @apply transition-transform duration-700 ease-out;
+}
+
+.scale-in {
+  @apply transition-transform duration-500 ease-out;
+}
+
+.stagger-item {
+  @apply opacity-0 translate-y-4;
+}
+
+.stagger-item.in-view {
+  @apply opacity-100 translate-y-0 transition-all duration-700;
+}
+
+/* Smooth scrolling for anchor links */
+a[href^="#"] {
+  scroll-behavior: smooth;
+}
