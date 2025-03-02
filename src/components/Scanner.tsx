@@ -2,39 +2,20 @@ import React, { useState } from 'react';
 import { Upload, Scan, AlertCircle, Camera } from 'lucide-react';
 import IngredientAnalysis from './IngredientAnalysis';
 
-// Mock data for development
-const mockAnalysis = [
-  {
-    name: "Sugar",
-    description: "Natural sweetener derived from plants.",
-    category: "food",
-    warnings: ["May contribute to dental issues and diabetes if consumed in excess"],
-    safetyLevel: "caution"
-  },
-  {
-    name: "Salt",
-    description: "Common mineral used for flavoring and preservation.",
-    category: "food",
-    warnings: ["May contribute to high blood pressure if consumed in excess"],
-    safetyLevel: "safe"
-  },
-  {
-    name: "Red 40",
-    description: "Artificial red food coloring.",
-    category: "chemical",
-    warnings: ["May cause hyperactivity in some children", "Artificial color"],
-    safetyLevel: "caution"
-  }
-];
-
-const mockAllergens = ["Contains milk", "May contain traces of nuts"];
-const mockNutritionalInfo = ["Calories: 150 per serving", "Total Fat: 5g", "Sodium: 150mg"];
+// Define types for analysis results
+interface AnalysisResult {
+  name: string;
+  description: string;
+  category: 'food' | 'chemical' | 'unknown' | 'error';
+  warnings: string[];
+  safetyLevel: 'safe' | 'caution' | 'warning' | 'unknown';
+}
 
 const Scanner = () => {
   const [image, setImage] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState(mockAnalysis);
-  const [allergens, setAllergens] = useState(mockAllergens);
-  const [nutritionalInfo, setNutritionalInfo] = useState(mockNutritionalInfo);
+  const [analysis, setAnalysis] = useState<AnalysisResult[]>([]);
+  const [allergens, setAllergens] = useState<string[]>([]);
+  const [nutritionalInfo, setNutritionalInfo] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -68,10 +49,32 @@ const Scanner = () => {
     setTimeout(() => {
       setLoading(false);
       // In a real app, we would process the image here
-      // For now, we'll just use the mock data
-      setAnalysis(mockAnalysis);
-      setAllergens(mockAllergens);
-      setNutritionalInfo(mockNutritionalInfo);
+      // For demo purposes, we'll add mock data only after upload
+      setAnalysis([
+        {
+          name: "Sugar",
+          description: "Natural sweetener derived from plants.",
+          category: "food",
+          warnings: ["May contribute to dental issues and diabetes if consumed in excess"],
+          safetyLevel: "caution"
+        },
+        {
+          name: "Salt",
+          description: "Common mineral used for flavoring and preservation.",
+          category: "food",
+          warnings: ["May contribute to high blood pressure if consumed in excess"],
+          safetyLevel: "safe"
+        },
+        {
+          name: "Red 40",
+          description: "Artificial red food coloring.",
+          category: "chemical",
+          warnings: ["May cause hyperactivity in some children", "Artificial color"],
+          safetyLevel: "caution"
+        }
+      ]);
+      setAllergens(["Contains milk", "May contain traces of nuts"]);
+      setNutritionalInfo(["Calories: 150 per serving", "Total Fat: 5g", "Sodium: 150mg"]);
     }, 2000);
   };
 
@@ -151,7 +154,7 @@ const Scanner = () => {
               </div>
             )}
 
-            {/* Results */}
+            {/* Results - Only show if analysis has data */}
             {(analysis.length > 0 || allergens.length > 0) && (
               <div className="mt-8 space-y-6">
                 {/* Ingredients Analysis */}
