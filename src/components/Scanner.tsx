@@ -1,20 +1,79 @@
 import React, { useState } from 'react';
 import { Upload, Scan, AlertCircle, Camera } from 'lucide-react';
-import { useImageUpload } from '@/hooks/useImageUpload';
 import IngredientAnalysis from './IngredientAnalysis';
 
-const Scanner = () => {
-  const { 
-    image, 
-    analysis, 
-    allergens,
-    nutritionalInfo,
-    loading, 
-    error, 
-    handleImageUpload 
-  } = useImageUpload();
+// Mock data for development
+const mockAnalysis = [
+  {
+    name: "Sugar",
+    description: "Natural sweetener derived from plants.",
+    category: "food",
+    warnings: ["May contribute to dental issues and diabetes if consumed in excess"],
+    safetyLevel: "caution"
+  },
+  {
+    name: "Salt",
+    description: "Common mineral used for flavoring and preservation.",
+    category: "food",
+    warnings: ["May contribute to high blood pressure if consumed in excess"],
+    safetyLevel: "safe"
+  },
+  {
+    name: "Red 40",
+    description: "Artificial red food coloring.",
+    category: "chemical",
+    warnings: ["May cause hyperactivity in some children", "Artificial color"],
+    safetyLevel: "caution"
+  }
+];
 
+const mockAllergens = ["Contains milk", "May contain traces of nuts"];
+const mockNutritionalInfo = ["Calories: 150 per serving", "Total Fat: 5g", "Sodium: 150mg"];
+
+const Scanner = () => {
+  const [image, setImage] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState(mockAnalysis);
+  const [allergens, setAllergens] = useState(mockAllergens);
+  const [nutritionalInfo, setNutritionalInfo] = useState(mockNutritionalInfo);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  const handleImageUpload = (file: File) => {
+    if (!file) {
+      setError('No file selected');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size too large. Please upload an image smaller than 10MB');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    // Create image URL
+    const imageUrl = URL.createObjectURL(file);
+    setImage(imageUrl);
+
+    // Simulate processing
+    setTimeout(() => {
+      setLoading(false);
+      // In a real app, we would process the image here
+      // For now, we'll just use the mock data
+      setAnalysis(mockAnalysis);
+      setAllergens(mockAllergens);
+      setNutritionalInfo(mockNutritionalInfo);
+    }, 2000);
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.2.2",
     "@vercel/analytics": "^1.4.1",
     "clsx": "^2.1.0",
     "framer-motion": "^11.0.8",

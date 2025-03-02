@@ -1,6 +1,13 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle, HelpCircle, AlertCircle } from 'lucide-react';
-import { AnalysisResult } from '@/types/analysis';
+
+interface AnalysisResult {
+  name: string;
+  description: string;
+  category: 'food' | 'chemical' | 'unknown' | 'error';
+  warnings: string[];
+  safetyLevel: 'safe' | 'caution' | 'warning' | 'unknown';
+}
 
 interface Props {
   results: AnalysisResult[];
