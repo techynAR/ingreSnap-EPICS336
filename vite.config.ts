@@ -15,4 +15,7 @@ export default defineConfig({
   server: {
     historyApiFallback: true,
   },
+  preview: {
+    port: 4173,
+  },
 });
