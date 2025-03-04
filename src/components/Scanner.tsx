@@ -369,17 +369,15 @@ const Scanner = () => {
             {(analysis.length > 0 || allergens.length > 0) && (
               <motion.div 
                 ref={resultsRef}
-                initial={{ opacity: 0, y: 20 }}
-                animate={resultsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                transition={{ duration: 0.8 }}
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
                 className="mt-8 space-y-6"
               >
                 {/* Ingredients Analysis */}
                 {analysis.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 1 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
                   >
                     <h3 className="text-xl font-semibold text-white mb-4">Ingredients Analysis:</h3>
                     <IngredientAnalysis results={analysis} />
@@ -389,9 +387,8 @@ const Scanner = () => {
                 {/* Allergens */}
                 {allergens.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 1 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
                   >
                     <h3 className="text-xl font-semibold text-white mb-4">Allergen Information:</h3>
                     <div className="bg-red-900/50 rounded-lg p-4">
@@ -400,9 +397,8 @@ const Scanner = () => {
                           <motion.li 
                             key={index} 
                             className="text-red-200"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 * index, duration: 0.3 }}
+                            initial={{ opacity: 1 }}
+                            animate={{ opacity: 1 }}
                           >
                             {allergen}
                           </motion.li>
@@ -415,9 +411,8 @@ const Scanner = () => {
                 {/* Nutritional Information */}
                 {nutritionalInfo.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 1 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6, duration: 0.5 }}
                   >
                     <h3 className="text-xl font-semibold text-white mb-4">Nutritional Information:</h3>
                     <div className="bg-gray-700 rounded-lg p-4">
@@ -426,9 +421,8 @@ const Scanner = () => {
                           <motion.li 
                             key={index} 
                             className="text-gray-200"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 * index, duration: 0.3 }}
+                            initial={{ opacity: 1 }}
+                            animate={{ opacity: 1 }}
                           >
                             {info}
                           </motion.li>
@@ -441,9 +435,8 @@ const Scanner = () => {
                 {/* Developer Section - Hidden by default */}
                 {extractedText && (
                   <motion.div 
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 1 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.5 }}
                     className="mt-8 border border-gray-700 rounded-lg overflow-hidden"
                   >
                     <motion.button 
