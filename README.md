@@ -16,7 +16,7 @@ We are a dynamic team of multidisciplinary engineering students from VIT Bhopal 
 - **Niranjan Kumar Chaurasiya** - B.Tech CSE Core  
 - **Sameer Kumar** - B.Tech CSE Core  
 - **Sreemukhi Kunche** - B.Tech CSE AI Specialization  
-- **Vikash Kumar Singh** - B.Tech CSE Cybersecurity Specialization  
+- **[Vikash Kumar Singh](https://www.linkedin.com/in/vikash-kumar-singh-62a948251/)** - B.Tech CSE Cybersecurity Specialization  
 
 This project is conducted under the esteemed guidance of **Dr. Arindam Ghosh**, whose expertise and mentorship have been instrumental in shaping *ingreSnap*.  
 
