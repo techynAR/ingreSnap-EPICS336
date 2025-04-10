@@ -42,7 +42,7 @@ const AboutPage = () => {
       name: "Faraz Ahmad Khan",
       role: "Developer",
       department: "B.Tech CSE Cloud Computing Specialization",
-      linkedin: "",
+      linkedin: "https://linkedin.com/in/faraz-ahmad-khan-634a40251",
       avatar: "/placeholder-avatar.png"
     },
     {
