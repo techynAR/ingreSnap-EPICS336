@@ -35,7 +35,7 @@ const AboutPage = () => {
       name: "Bachhav Ujjwal Ganesh",
       role: "Developer",
       department: "B.Tech CSE Cybersecurity Specialization",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/ujjwal-bachhav-26b98824b",
       avatar: "/placeholder-avatar.png"
     },
     {
