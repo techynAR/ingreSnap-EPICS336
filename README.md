@@ -12,7 +12,7 @@ We are a dynamic team of multidisciplinary engineering students from VIT Bhopal 
 - **[Bachhav Ujjwal Ganesh](https://www.linkedin.com/in/ujjwal-bachhav-26b98824b)** - B.Tech CSE Cybersecurity Specialization  
 - **[Faraz Ahmad Khan](https://linkedin.com/in/faraz-ahmad-khan-634a40251)** - B.Tech CSE Cloud Computing Specialization  
 - **Fanish Kumar Diwan** - B.Tech CSE Cybersecurity Specialization  
-- **Krishna Teja** - B.Tech CSE Core  
+- **[Krishna Teja](https://www.linkedin.com/in/teja-krishna-0778a0279/)** - B.Tech CSE Core  
 - **Niranjan Kumar Chaurasiya** - B.Tech CSE Core  
 - **Sameer Kumar** - B.Tech CSE Core  
 - **Sreemukhi Kunche** - B.Tech CSE AI Specialization  
