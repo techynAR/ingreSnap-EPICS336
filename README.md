@@ -9,8 +9,8 @@ We are a dynamic team of multidisciplinary engineering students from VIT Bhopal 
 
 (listed in alphabetical order)
 - **[Aryan Sharma](https://www.linkedin.com/in/aryan-sharma-techynar/)** *(Group Leader)* - B.Tech CSE Core  
-- **Bachhav Ujjwal Ganesh** - B.Tech CSE Cybersecurity Specialization  
-- **Faraz Ahmad Khan** - B.Tech CSE Cloud Computing Specialization  
+- **[Bachhav Ujjwal Ganesh](https://www.linkedin.com/in/ujjwal-bachhav-26b98824b)** - B.Tech CSE Cybersecurity Specialization  
+- **[Faraz Ahmad Khan](https://linkedin.com/in/faraz-ahmad-khan-634a40251)** - B.Tech CSE Cloud Computing Specialization  
 - **Fanish Kumar Diwan** - B.Tech CSE Cybersecurity Specialization  
 - **Krishna Teja** - B.Tech CSE Core  
 - **Niranjan Kumar Chaurasiya** - B.Tech CSE Core  
