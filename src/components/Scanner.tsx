@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Scan, AlertCircle, Camera, Info, Github, ChevronDown, ChevronUp, Cloud, Laptop, X, ExternalLink } from 'lucide-react';
+import { Upload, Scan, AlertCircle, Camera, Info, ChevronDown, ChevronUp, Cloud, Laptop, X, ExternalLink, Settings } from 'lucide-react';
 import IngredientAnalysis from './IngredientAnalysis';
 import { ingredientsDatabase } from '../data/ingredients';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +15,11 @@ interface AnalysisResult {
   category: 'food' | 'chemical' | 'unknown' | 'error';
   warnings: string[];
   safetyLevel: 'safe' | 'caution' | 'warning' | 'unknown';
+}
+
+interface ScannerSettings {
+  defaultProcessingMode: 'local' | 'cloud';
+  showOnlyKnownIngredients: boolean;
 }
 
 const extractAllergens = (text: string): string[] => {
@@ -55,9 +60,12 @@ const Scanner = () => {
   const [dragActive, setDragActive] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [showExtractedText, setShowExtractedText] = useState(false);
-  const [useLocalOCR, setUseLocalOCR] = useState(false);
-  const [showOCRChoice, setShowOCRChoice] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<ScannerSettings>({
+    defaultProcessingMode: 'cloud',
+    showOnlyKnownIngredients: false,
+  });
 
   const { ref: titleRef, inView: titleInView } = useInView({
     threshold: 0.1,
@@ -74,18 +82,9 @@ const Scanner = () => {
     triggerOnce: false,
   });
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
-    setShowOCRChoice(true);
-  };
-
-  const handleOCRChoice = async (useLocal: boolean) => {
-    setUseLocalOCR(useLocal);
-    setShowOCRChoice(false);
-    if (selectedFile) {
-      await handleImageUpload(selectedFile);
-    }
-    setSelectedFile(null);
+    await handleImageUpload(file);
   };
 
   const handleImageUpload = async (file: File | undefined) => {
@@ -115,7 +114,10 @@ const Scanner = () => {
       setImage(imageUrl);
 
       const ocrService = OCRService.getInstance();
-      const { text, error: ocrError } = await ocrService.processImage(file, useLocalOCR);
+      const { text, error: ocrError } = await ocrService.processImage(
+        file, 
+        settings.defaultProcessingMode === 'local'
+      );
 
       if (ocrError) {
         throw new Error(ocrError);
@@ -137,10 +139,15 @@ const Scanner = () => {
       const analysisPromises = ingredients.map(ingredient => analyzeIngredient(ingredient));
       const analysisResults = await Promise.all(analysisPromises);
       
+      // Filter results based on settings
+      const filteredResults = settings.showOnlyKnownIngredients
+        ? analysisResults.filter(result => result.category !== 'unknown')
+        : analysisResults;
+
       const potentialAllergens = extractAllergens(text);
       const nutrition = extractNutritionalInfo(text);
 
-      setAnalysis(analysisResults);
+      setAnalysis(filteredResults);
       setAllergens(potentialAllergens);
       setNutritionalInfo(nutrition);
 
@@ -180,6 +187,10 @@ const Scanner = () => {
     setShowExtractedText(!showExtractedText);
   };
 
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+
   return (
     <section id="get-started" className="min-h-screen bg-gray-900 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -190,13 +201,91 @@ const Scanner = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Scan Your Product
-          </h2>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">
+              Scan Your Product
+            </h2>
+            <button
+              onClick={toggleSettings}
+              className="p-2 rounded-full hover:bg-gray-800 transition-colors"
+              title="Settings"
+            >
+              <Settings className="w-6 h-6 text-gray-400" />
+            </button>
+          </div>
           <p className="text-gray-400 max-w-2xl mx-auto">
             Upload a clear image of your product's ingredient list, and we'll help you understand what's inside.
           </p>
         </motion.div>
+
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-3xl mx-auto mb-8 bg-gray-800 rounded-lg p-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-white">Settings</h3>
+                <button
+                  onClick={toggleSettings}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-300 mb-2 block">
+                    Default Processing Mode
+                  </label>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, defaultProcessingMode: 'cloud' }))}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                        settings.defaultProcessingMode === 'cloud'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-gray-700 text-gray-300'
+                      }`}
+                    >
+                      <Cloud className="h-4 w-4" />
+                      Cloud Processing
+                    </button>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, defaultProcessingMode: 'local' }))}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                        settings.defaultProcessingMode === 'local'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-gray-700 text-gray-300'
+                      }`}
+                    >
+                      <Laptop className="h-4 w-4" />
+                      Local Processing
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="showKnownOnly"
+                    checked={settings.showOnlyKnownIngredients}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      showOnlyKnownIngredients: e.target.checked
+                    }))}
+                    className="w-4 h-4 rounded border-gray-600 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="showKnownOnly" className="text-sm text-gray-300">
+                    Show only known ingredients in analysis
+                  </label>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="max-w-3xl mx-auto">
           <motion.div 
@@ -248,91 +337,6 @@ const Scanner = () => {
                 />
               </label>
             </motion.div>
-
-            <AnimatePresence>
-              {showOCRChoice && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
-                  >
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold text-white">Choose Processing Method</h3>
-                      <button
-                        onClick={() => setShowOCRChoice(false)}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <button
-                        onClick={() => handleOCRChoice(false)}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-lg flex items-center justify-between group transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <Cloud className="h-6 w-6 mr-3" />
-                          <div className="text-left">
-                            <div className="font-medium">Cloud Processing</div>
-                            <div className="text-sm text-emerald-200">Better accuracy, requires internet</div>
-                          </div>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">→</div>
-                      </button>
-                      
-                      <button
-                        onClick={() => handleOCRChoice(true)}
-                        className="w-full bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-between group transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <Laptop className="h-6 w-6 mr-3" />
-                          <div className="text-left">
-                            <div className="font-medium">Local Processing</div>
-                            <div className="text-sm text-gray-300">Privacy-focused, works offline</div>
-                          </div>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">→</div>
-                      </button>
-
-                      <div className="mt-6 border-t border-gray-700 pt-4">
-                        <h4 className="text-sm font-medium text-white mb-2">Privacy Information</h4>
-                        <p className="text-sm text-gray-400 mb-3">
-                          Cloud processing uses OCR.space, which follows strict data protection practices:
-                        </p>
-                        <ul className="text-sm text-gray-400 space-y-2 list-disc list-inside mb-3">
-                          <li>All uploaded images are deleted after processing</li>
-                          <li>No personal data is collected or stored</li>
-                          <li>Compliant with GDPR and European data protection laws</li>
-                        </ul>
-                        <div className="flex items-center gap-2">
-                          <a
-                            href="https://ocr.space/privacypolicy"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                          >
-                            View Privacy Policy
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-500 mt-4">
-                        Local processing runs entirely in your browser using Tesseract.js - no data leaves your device.
-                      </p>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {error && (
               <motion.div 
