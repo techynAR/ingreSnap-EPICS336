@@ -35,7 +35,7 @@ const Chatbot = () => {
 
     try {
       const geminiService = GeminiService.getInstance();
-      const result = await geminiService.model.generateContent({
+      const prompt = {
         contents: [{
           parts: [{
             text: `You are a helpful assistant for the ingreSnap website. Respond to this user query about ingredients, the website, or contact information. If they ask about contacting us, provide the email aryan@techynar.com. If they ask about the website or team, suggest visiting the About page. Keep responses concise and friendly.
@@ -43,8 +43,9 @@ const Chatbot = () => {
 User query: ${userMessage}`
           }]
         }]
-      });
+      };
 
+      const result = await geminiService.model.generateContent(prompt);
       const response = await result.response;
       const botResponse = response.text();
 
