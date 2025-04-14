@@ -12,8 +12,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
   server: {
-    historyApiFallback: true,
+    port: 3000,
+    host: true,
   },
   preview: {
     port: 4173,

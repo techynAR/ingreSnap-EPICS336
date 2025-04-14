@@ -7,7 +7,7 @@ interface OCRResult {
 
 export class OCRService {
   private static instance: OCRService;
-  private readonly apiEndpoint = '/api/ocr';
+  private readonly apiKey = import.meta.env.VITE_OCR_SPACE_API_KEY;
 
   private constructor() {}
 
@@ -22,10 +22,18 @@ export class OCRService {
     try {
       const formData = new FormData();
       formData.append('file', imageFile);
+      formData.append('language', 'eng');
+      formData.append('isOverlayRequired', 'false');
+      formData.append('detectOrientation', 'true');
+      formData.append('scale', 'true');
+      formData.append('OCREngine', '2');
 
-      const response = await fetch(this.apiEndpoint, {
+      const response = await fetch('https://api.ocr.space/parse/image', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'apikey': this.apiKey
+        },
+        body: formData
       });
 
       if (!response.ok) {
@@ -38,10 +46,6 @@ export class OCRService {
         throw new Error(result.ErrorMessage || 'OCR processing failed');
       }
 
-      if (result.OCRExitCode !== 1) {
-        throw new Error(result.ErrorMessage || 'OCR processing failed');
-      }
-
       const extractedText = result.ParsedResults?.[0]?.ParsedText;
       if (!extractedText) {
         throw new Error('No text extracted from image');
@@ -49,7 +53,6 @@ export class OCRService {
 
       return { text: extractedText };
     } catch (error) {
-      // Check specifically for CORS and network-related errors
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error('Network error occurred');
       }
@@ -81,22 +84,19 @@ export class OCRService {
   }
 
   public async processImage(imageFile: File, forceTesseract = false): Promise<OCRResult> {
-    if (forceTesseract) {
+    if (forceTesseract || !this.apiKey) {
       console.log('Using Tesseract.js for OCR processing');
       return await this.tesseractProcess(imageFile);
     }
 
     try {
-      // Try OCR.space first
       return await this.ocrSpaceProcess(imageFile);
     } catch (error) {
-      // If it's a network error, fall back to Tesseract immediately
       if (error instanceof Error && error.message.includes('Network')) {
         console.warn('OCR.space network error detected, falling back to Tesseract.js');
         return await this.tesseractProcess(imageFile);
       }
       
-      // For other errors, try Tesseract as fallback
       console.warn('OCR.space failed, falling back to Tesseract.js:', error);
       return await this.tesseractProcess(imageFile);
     }
