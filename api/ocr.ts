@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import FormData from 'form-data';
+import fetch from 'node-fetch';
 
 export default async function handler(
   request: VercelRequest,
