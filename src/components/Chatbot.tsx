@@ -35,13 +35,18 @@ const Chatbot = () => {
 
     try {
       const geminiService = GeminiService.getInstance();
-      const prompt = `You are a helpful assistant for the ingreSnap website. Respond to this user query about ingredients, the website, or contact information. If they ask about contacting us, provide the email aryan@techynar.com. If they ask about the website or team, suggest visiting the About page. Keep responses concise and friendly.
+      const result = await geminiService.model.generateContent({
+        contents: [{
+          parts: [{
+            text: `You are a helpful assistant for the ingreSnap website. Respond to this user query about ingredients, the website, or contact information. If they ask about contacting us, provide the email aryan@techynar.com. If they ask about the website or team, suggest visiting the About page. Keep responses concise and friendly.
 
-User query: ${userMessage}`;
+User query: ${userMessage}`
+          }]
+        }]
+      });
 
-      const result = await geminiService.model.generateContent(prompt);
       const response = await result.response;
-      const botResponse = response.text().trim();
+      const botResponse = response.text();
 
       // Handle navigation to About page if mentioned
       if (botResponse.toLowerCase().includes('about page')) {
@@ -53,6 +58,7 @@ User query: ${userMessage}`;
         setMessages(prev => [...prev, { role: 'assistant', content: botResponse }]);
       }
     } catch (error) {
+      console.error('Gemini API error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
