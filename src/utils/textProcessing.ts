@@ -12,103 +12,32 @@ export function extractTextSections(text: string): TextSection {
       otherText: []
     };
 
-    // Extract ingredients section with improved pattern matching
-    const ingredientsPatterns = [
-      /ingredients:?(.*?)(?=(allergen|contains|nutrition|may contain|$))/is,
-      /ingred(?:ient)?s:?(.*?)(?=(allergen|contains|nutrition|may contain|$))/is,
-      /^(?!allergen|contains|nutrition)(.*?)(?=(allergen|contains|nutrition|may contain|$))/is
-    ];
+    // Find the ingredients section starting point
+    const ingredientsStart = normalized.indexOf('ingredients');
+    if (ingredientsStart === -1) {
+      // If no "ingredients" found, try alternate spellings/formats
+      const alternateStarts = [
+        normalized.indexOf('ingred'),
+        normalized.indexOf('contains:'),
+        normalized.indexOf('contains ')
+      ].filter(index => index !== -1);
 
-    for (const pattern of ingredientsPatterns) {
-      const match = normalized.match(pattern);
-      if (match?.[1] && match[1].trim().length > 0) {
-        const parsedIngredients = parseIngredients(match[1]);
-        if (parsedIngredients.length > 0) {
-          sections.ingredients = parsedIngredients;
-          break;
-        }
+      if (alternateStarts.length > 0) {
+        const startIndex = Math.min(...alternateStarts);
+        const textToProcess = normalized.slice(startIndex);
+        return processTextSections(textToProcess, sections);
       }
+
+      // If no starting point found, return empty sections
+      return sections;
     }
 
-    // If no ingredients found yet, try a fallback approach
-    if (sections.ingredients.length === 0) {
-      // Fallback: treat the entire text as ingredients if no specific section found
-      sections.ingredients = parseIngredients(normalized);
-    }
+    // Process only the text after "ingredients"
+    const textToProcess = normalized.slice(ingredientsStart);
+    return processTextSections(textToProcess, sections);
 
-    // Extract allergens with improved pattern matching
-    const allergenPatterns = [
-      /allergen(?:s)?:?(.*?)(?=(ingredients|nutrition|$))/is,
-      /contains:?(.*?)(?=(ingredients|nutrition|$))/is,
-      /may contain:?(.*?)(?=(ingredients|nutrition|$))/is,
-      /manufactured in a facility that(?:.*?)(contains|processes)(.*?)(?=(\.|$))/is,
-      /warning:?(.*?)(allergen|contain)(?:s)?:?(.*?)(?=(\.|$))/is
-    ];
-
-    for (const pattern of allergenPatterns) {
-      const match = normalized.match(pattern);
-      if (match) {
-        // Extract the relevant capture group (may be in different positions)
-        const allergenText = match[1] || match[2] || match[3] || '';
-        if (allergenText.trim().length > 0) {
-          const allergens = allergenText
-            .split(/[,.]/)
-            .map(a => a.trim())
-            .filter(a => a.length > 0)
-            .map(a => a.replace(/^(contains|processes|and|or)\s+/, ''));
-          
-          sections.allergens.push(...allergens);
-        }
-      }
-    }
-
-    // Remove duplicates from allergens
-    sections.allergens = [...new Set(sections.allergens)];
-
-    // Extract nutrition information with improved pattern matching
-    const nutritionPatterns = [
-      /nutrition(?:al)? (?:facts|information):?(.*?)(?=(ingredients|allergen|contains|$))/is,
-      /nutrition(?:al)?:?(.*?)(?=(ingredients|allergen|contains|$))/is,
-      /(?:serving size|calories|protein|carbohydrate|fat):?(.*?)(?=(ingredients|allergen|contains|$))/is
-    ];
-
-    for (const pattern of nutritionPatterns) {
-      const match = normalized.match(pattern);
-      if (match?.[1] && match[1].trim().length > 0) {
-        const nutritionLines = match[1]
-          .split(/[\n\r]/)
-          .map(n => n.trim())
-          .filter(n => n.length > 0 && /\d/.test(n)); // Must contain at least one digit
-        
-        if (nutritionLines.length > 0) {
-          sections.nutritionalInfo = nutritionLines;
-          break;
-        }
-      }
-    }
-
-    // Store any remaining text that wasn't categorized
-    const categorizedText = [
-      ...sections.ingredients.join(' '),
-      ...sections.allergens.join(' '),
-      ...sections.nutritionalInfo.join(' ')
-    ].join(' ').toLowerCase();
-
-    const remainingText = normalized
-      .split(/[\n\r]/)
-      .map(line => line.trim())
-      .filter(line => {
-        if (line.length === 0) return false;
-        // Check if this line is already included in any other section
-        return !categorizedText.includes(line.toLowerCase());
-      });
-
-    sections.otherText = remainingText;
-
-    return sections;
   } catch (error) {
     console.error('Error extracting text sections:', error);
-    // Return empty sections on error
     return {
       ingredients: [],
       allergens: [],
@@ -116,4 +45,76 @@ export function extractTextSections(text: string): TextSection {
       otherText: []
     };
   }
+}
+
+function processTextSections(text: string, sections: TextSection): TextSection {
+  // Extract ingredients section with improved pattern matching
+  const ingredientsPatterns = [
+    /ingredients:?(.*?)(?=(allergen|contains|nutrition|may contain|$))/is,
+    /ingred(?:ient)?s:?(.*?)(?=(allergen|contains|nutrition|may contain|$))/is,
+    /^(?!allergen|contains|nutrition)(.*?)(?=(allergen|contains|nutrition|may contain|$))/is
+  ];
+
+  for (const pattern of ingredientsPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1] && match[1].trim().length > 0) {
+      const parsedIngredients = parseIngredients(match[1]);
+      if (parsedIngredients.length > 0) {
+        sections.ingredients = parsedIngredients;
+        break;
+      }
+    }
+  }
+
+  // Extract allergens with improved pattern matching
+  const allergenPatterns = [
+    /allergen(?:s)?:?(.*?)(?=(ingredients|nutrition|$))/is,
+    /contains:?(.*?)(?=(ingredients|nutrition|$))/is,
+    /may contain:?(.*?)(?=(ingredients|nutrition|$))/is,
+    /manufactured in a facility that(?:.*?)(contains|processes)(.*?)(?=(\.|$))/is,
+    /warning:?(.*?)(allergen|contain)(?:s)?:?(.*?)(?=(\.|$))/is
+  ];
+
+  for (const pattern of allergenPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const allergenText = match[1] || match[2] || match[3] || '';
+      if (allergenText.trim().length > 0) {
+        const allergens = allergenText
+          .split(/[,.]/)
+          .map(a => a.trim())
+          .filter(a => a.length > 0)
+          .map(a => a.replace(/^(contains|processes|and|or)\s+/, ''));
+        
+        sections.allergens.push(...allergens);
+      }
+    }
+  }
+
+  // Remove duplicates from allergens
+  sections.allergens = [...new Set(sections.allergens)];
+
+  // Extract nutrition information
+  const nutritionPatterns = [
+    /nutrition(?:al)? (?:facts|information):?(.*?)(?=(ingredients|allergen|contains|$))/is,
+    /nutrition(?:al)?:?(.*?)(?=(ingredients|allergen|contains|$))/is,
+    /(?:serving size|calories|protein|carbohydrate|fat):?(.*?)(?=(ingredients|allergen|contains|$))/is
+  ];
+
+  for (const pattern of nutritionPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1] && match[1].trim().length > 0) {
+      const nutritionLines = match[1]
+        .split(/[\n\r]/)
+        .map(n => n.trim())
+        .filter(n => n.length > 0 && /\d/.test(n));
+      
+      if (nutritionLines.length > 0) {
+        sections.nutritionalInfo = nutritionLines;
+        break;
+      }
+    }
+  }
+
+  return sections;
 }
