@@ -3,6 +3,8 @@ import { MessageCircle, X, Send, Loader2, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { GeminiService } from '../services/geminiService';
+import { findBestMatch, processQuery, isGreeting, getGreetingResponse, findIngredientInDatabase } from '../utils/chatUtils';
+import { FAQ } from '../data/faq';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -34,35 +36,56 @@ const Chatbot = () => {
     setIsLoading(true);
 
     try {
-      const geminiService = GeminiService.getInstance();
-      const prompt = {
-        contents: [{
-          parts: [{
-            text: `You are a helpful assistant for the ingreSnap website. Respond to this user query about ingredients, the website, or contact information. If they ask about contacting us, provide the email aryan@techynar.com. If they ask about the website or team, suggest visiting the About page. Keep responses concise and friendly.
+      let response: string;
+      const processedQuery = processQuery(userMessage);
+
+      // Check for ingredient information first
+      const ingredientMatch = findIngredientInDatabase(userMessage);
+      if (ingredientMatch.found) {
+        response = ingredientMatch.response;
+      }
+      // Handle greetings
+      else if (isGreeting(processedQuery)) {
+        response = getGreetingResponse();
+      }
+      // Try Gemini API or fall back to local responses
+      else {
+        try {
+          const geminiService = GeminiService.getInstance();
+          const prompt = {
+            contents: [{
+              parts: [{
+                text: `You are a helpful assistant for the ingreSnap website. Respond to this user query about ingredients, the website, or contact information. If they ask about contacting us, provide the email aryan@techynar.com. If they ask about the website or team, suggest visiting the About page. Keep responses concise and friendly.
 
 User query: ${userMessage}`
-          }]
-        }]
-      };
+              }]
+            }]
+          };
 
-      const result = await geminiService.model.generateContent(prompt);
-      const response = await result.response;
-      const botResponse = response.text();
+          const result = await geminiService.model.generateContent(prompt);
+          const apiResponse = await result.response;
+          response = apiResponse.text();
+        } catch (error) {
+          console.warn('Gemini API unavailable, using local response system');
+          response = findBestMatch(processedQuery, FAQ);
+        }
+      }
 
       // Handle navigation to About page if mentioned
-      if (botResponse.toLowerCase().includes('about page')) {
+      if (response.toLowerCase().includes('about page')) {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: botResponse + "\n\nI can take you to the About page if you'd like. Just click the link below.",
+          content: response + "\n\nI can take you to the About page if you'd like. Just click the link below.",
         }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: botResponse }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: response }]);
       }
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('Chat processing error:', error);
+      const fallbackResponse = findBestMatch(processQuery(userMessage), FAQ);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
+        content: fallbackResponse,
       }]);
     }
 
