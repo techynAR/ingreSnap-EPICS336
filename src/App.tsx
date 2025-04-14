@@ -7,6 +7,7 @@ import Navigation from './components/Navigation';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ScannerPage from './pages/ScannerPage';
+import Chatbot from './components/Chatbot';
 
 // ScrollToTop component to handle scrolling to top on route change
 function ScrollToTop() {
@@ -43,6 +44,7 @@ function App() {
         <div className="bg-gray-900 min-h-screen">
           <Navigation />
           <AppRoutes />
+          <Chatbot />
           <Analytics />
         </div>
       </Router>
