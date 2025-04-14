@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Upload, Scan, AlertCircle, Camera, Info, Github, ChevronDown, ChevronUp } from 'lucide-react';
-import { createWorker } from 'tesseract.js';
+import { Upload, Scan, AlertCircle, Camera, Info, Github, ChevronDown, ChevronUp, Cloud, Laptop, X, ExternalLink } from 'lucide-react';
 import IngredientAnalysis from './IngredientAnalysis';
 import { ingredientsDatabase } from '../data/ingredients';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { OCRService } from '../services/ocrService';
+import { parseIngredients as processIngredientText } from '../utils/ingredientParser';
+import { analyzeIngredient } from '../services/analysis';
 
 // Define types for analysis results
 interface AnalysisResult {
@@ -14,6 +16,34 @@ interface AnalysisResult {
   warnings: string[];
   safetyLevel: 'safe' | 'caution' | 'warning' | 'unknown';
 }
+
+const extractAllergens = (text: string): string[] => {
+  const commonAllergens = [
+    'milk', 'dairy', 'eggs', 'peanuts', 'tree nuts', 'soy', 'wheat', 'fish',
+    'shellfish', 'sesame', 'gluten', 'lactose', 'nuts'
+  ];
+
+  const lowerText = text.toLowerCase();
+  return commonAllergens.filter(allergen => lowerText.includes(allergen));
+};
+
+const extractNutritionalInfo = (text: string): string[] => {
+  const lines = text.split('\n');
+  
+  return lines.filter(line => {
+    const lowerLine = line.toLowerCase();
+    return (
+      lowerLine.includes('calories') ||
+      lowerLine.includes('protein') ||
+      lowerLine.includes('fat') ||
+      lowerLine.includes('carbohydrate') ||
+      lowerLine.includes('sugar') ||
+      lowerLine.includes('sodium') ||
+      /\d+\s*g/.test(line) ||
+      /\d+\s*mg/.test(line)
+    );
+  });
+};
 
 const Scanner = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -25,6 +55,9 @@ const Scanner = () => {
   const [dragActive, setDragActive] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [showExtractedText, setShowExtractedText] = useState(false);
+  const [useLocalOCR, setUseLocalOCR] = useState(false);
+  const [showOCRChoice, setShowOCRChoice] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { ref: titleRef, inView: titleInView } = useInView({
     threshold: 0.1,
@@ -41,19 +74,31 @@ const Scanner = () => {
     triggerOnce: false,
   });
 
-  const handleImageUpload = async (file: File) => {
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setShowOCRChoice(true);
+  };
+
+  const handleOCRChoice = async (useLocal: boolean) => {
+    setUseLocalOCR(useLocal);
+    setShowOCRChoice(false);
+    if (selectedFile) {
+      await handleImageUpload(selectedFile);
+    }
+    setSelectedFile(null);
+  };
+
+  const handleImageUpload = async (file: File | undefined) => {
     if (!file) {
       setError('No file selected');
       return;
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type?.startsWith('image/')) {
       setError('Please upload an image file');
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setError('File size too large. Please upload an image smaller than 10MB');
       return;
@@ -65,42 +110,34 @@ const Scanner = () => {
     setAllergens([]);
     setNutritionalInfo([]);
 
-    // Create image URL
-    const imageUrl = URL.createObjectURL(file);
-    setImage(imageUrl);
-
     try {
-      // Initialize Tesseract worker
-      const worker = await createWorker('eng');
-      
-      // Perform OCR
-      const { data } = await worker.recognize(imageUrl);
-      const { text } = data;
-      
-      // Clean up resources
-      await worker.terminate();
+      const imageUrl = URL.createObjectURL(file);
+      setImage(imageUrl);
 
-      // Set extracted text
-      setExtractedText(text);
+      const ocrService = OCRService.getInstance();
+      const { text, error: ocrError } = await ocrService.processImage(file, useLocalOCR);
+
+      if (ocrError) {
+        throw new Error(ocrError);
+      }
 
       if (!text || text.trim().length === 0) {
         throw new Error('No text could be extracted from the image. Please ensure the image contains clear, readable text.');
       }
 
-      // Process the extracted text
+      setExtractedText(text);
+
       const ingredients = processIngredientText(text);
       
       if (ingredients.length === 0) {
         throw new Error('No ingredients could be identified in the image. Please ensure the image shows an ingredient list clearly.');
       }
 
-      // Analyze each ingredient
-      const analysisResults = ingredients.map(ingredient => analyzeIngredient(ingredient));
+      // Analyze each ingredient and wait for all results
+      const analysisPromises = ingredients.map(ingredient => analyzeIngredient(ingredient));
+      const analysisResults = await Promise.all(analysisPromises);
       
-      // Extract potential allergens
       const potentialAllergens = extractAllergens(text);
-      
-      // Extract nutritional info
       const nutrition = extractNutritionalInfo(text);
 
       setAnalysis(analysisResults);
@@ -113,149 +150,10 @@ const Scanner = () => {
       console.error('Image processing error:', err);
     } finally {
       setLoading(false);
-      // Clean up the object URL
-      URL.revokeObjectURL(imageUrl);
-    }
-  };
-
-  // Process the extracted text to identify ingredients
-  const processIngredientText = (text: string): string[] => {
-    // Convert to lowercase for easier matching
-    const lowerText = text.toLowerCase();
-    
-    // Try to find the ingredients section
-    let ingredientsSection = lowerText;
-    
-    // Look for common ingredient list markers
-    const ingredientsMarkers = ['ingredients:', 'ingredients', 'contains:'];
-    for (const marker of ingredientsMarkers) {
-      if (lowerText.includes(marker)) {
-        const startIndex = lowerText.indexOf(marker) + marker.length;
-        // Try to find the end of the ingredients section
-        const endMarkers = ['nutrition facts', 'allergens:', 'may contain', 'manufactured in'];
-        let endIndex = lowerText.length;
-        
-        for (const endMarker of endMarkers) {
-          const markerIndex = lowerText.indexOf(endMarker, startIndex);
-          if (markerIndex !== -1 && markerIndex < endIndex) {
-            endIndex = markerIndex;
-          }
-        }
-        
-        ingredientsSection = lowerText.substring(startIndex, endIndex).trim();
-        break;
+      if (image) {
+        URL.revokeObjectURL(image);
       }
     }
-    
-    // Split by common delimiters
-    const ingredients = ingredientsSection
-      .split(/[,.]/)
-      .map(item => item.trim())
-      .filter(item => item.length > 2); // Filter out very short items
-    
-    return ingredients;
-  };
-
-  // Analyze a single ingredient
-  const analyzeIngredient = (ingredient: string): AnalysisResult => {
-    // Clean the ingredient name
-    const cleanedName = ingredient.toLowerCase().trim();
-    
-    // Try to find the ingredient in our database
-    for (const [key, data] of Object.entries(ingredientsDatabase)) {
-      if (cleanedName.includes(key) || key.includes(cleanedName)) {
-        return {
-          name: ingredient,
-          description: data.description,
-          category: data.category,
-          warnings: data.warnings,
-          safetyLevel: data.safetyLevel
-        };
-      }
-    }
-    
-    // Check for common allergens not in database
-    const commonAllergens = ['peanut', 'tree nut', 'milk', 'egg', 'wheat', 'soy', 'fish', 'shellfish'];
-    for (const allergen of commonAllergens) {
-      if (cleanedName.includes(allergen)) {
-        return {
-          name: ingredient,
-          description: `This ingredient may contain ${allergen}, which is a common allergen.`,
-          category: 'food',
-          warnings: [`May contain ${allergen} allergen`],
-          safetyLevel: 'caution'
-        };
-      }
-    }
-    
-    // Default for unknown ingredients
-    return {
-      name: ingredient,
-      description: 'This ingredient is not in our database. Consider consulting with a professional for more information.',
-      category: 'unknown',
-      warnings: ['Unknown ingredient - exercise caution'],
-      safetyLevel: 'caution'
-    };
-  };
-
-  // Extract potential allergens from text
-  const extractAllergens = (text: string): string[] => {
-    const lowerText = text.toLowerCase();
-    const allergenMarkers = ['allergens:', 'contains:', 'may contain:', 'warning:'];
-    const commonAllergens = [
-      'peanuts', 'tree nuts', 'milk', 'eggs', 'wheat', 'soy', 'fish', 'shellfish', 
-      'gluten', 'sesame', 'mustard', 'celery', 'lupin', 'molluscs', 'sulphites'
-    ];
-    
-    const foundAllergens: string[] = [];
-    
-    // Look for explicit allergen sections
-    for (const marker of allergenMarkers) {
-      if (lowerText.includes(marker)) {
-        const startIndex = lowerText.indexOf(marker) + marker.length;
-        let endIndex = lowerText.indexOf('\n', startIndex);
-        if (endIndex === -1) endIndex = lowerText.length;
-        
-        const allergenSection = lowerText.substring(startIndex, endIndex).trim();
-        const sectionAllergens = allergenSection
-          .split(/[,.]/)
-          .map(a => a.trim())
-          .filter(a => a.length > 0);
-        
-        foundAllergens.push(...sectionAllergens);
-      }
-    }
-    
-    // Also check for common allergens in the entire text
-    for (const allergen of commonAllergens) {
-      if (lowerText.includes(allergen) && !foundAllergens.some(a => a.includes(allergen))) {
-        foundAllergens.push(`Contains ${allergen}`);
-      }
-    }
-    
-    return foundAllergens;
-  };
-
-  // Extract nutritional information
-  const extractNutritionalInfo = (text: string): string[] => {
-    const lowerText = text.toLowerCase();
-    const nutritionMarkers = ['nutrition facts', 'nutritional information'];
-    
-    for (const marker of nutritionMarkers) {
-      if (lowerText.includes(marker)) {
-        const startIndex = lowerText.indexOf(marker);
-        let endIndex = lowerText.indexOf('ingredients', startIndex);
-        if (endIndex === -1) endIndex = lowerText.length;
-        
-        const nutritionSection = lowerText.substring(startIndex, endIndex).trim();
-        return nutritionSection
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0 && /\d/.test(line)); // Must contain at least one digit
-      }
-    }
-    
-    return [];
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -274,7 +172,7 @@ const Scanner = () => {
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageUpload(e.dataTransfer.files[0]);
+      handleFileSelect(e.dataTransfer.files[0]);
     }
   };
 
@@ -307,7 +205,6 @@ const Scanner = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {/* Upload Section */}
             <motion.div 
               ref={uploadRef}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -346,13 +243,97 @@ const Scanner = () => {
                   type="file"
                   className="hidden"
                   accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                  onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                   disabled={loading}
                 />
               </label>
             </motion.div>
 
-            {/* Error State */}
+            <AnimatePresence>
+              {showOCRChoice && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-semibold text-white">Choose Processing Method</h3>
+                      <button
+                        onClick={() => setShowOCRChoice(false)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <button
+                        onClick={() => handleOCRChoice(false)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-lg flex items-center justify-between group transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <Cloud className="h-6 w-6 mr-3" />
+                          <div className="text-left">
+                            <div className="font-medium">Cloud Processing</div>
+                            <div className="text-sm text-emerald-200">Better accuracy, requires internet</div>
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">→</div>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleOCRChoice(true)}
+                        className="w-full bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-between group transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <Laptop className="h-6 w-6 mr-3" />
+                          <div className="text-left">
+                            <div className="font-medium">Local Processing</div>
+                            <div className="text-sm text-gray-300">Privacy-focused, works offline</div>
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">→</div>
+                      </button>
+
+                      <div className="mt-6 border-t border-gray-700 pt-4">
+                        <h4 className="text-sm font-medium text-white mb-2">Privacy Information</h4>
+                        <p className="text-sm text-gray-400 mb-3">
+                          Cloud processing uses OCR.space, which follows strict data protection practices:
+                        </p>
+                        <ul className="text-sm text-gray-400 space-y-2 list-disc list-inside mb-3">
+                          <li>All uploaded images are deleted after processing</li>
+                          <li>No personal data is collected or stored</li>
+                          <li>Compliant with GDPR and European data protection laws</li>
+                        </ul>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href="https://ocr.space/privacypolicy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            View Privacy Policy
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-4">
+                        Local processing runs entirely in your browser using Tesseract.js - no data leaves your device.
+                      </p>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {error && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
@@ -365,136 +346,61 @@ const Scanner = () => {
               </motion.div>
             )}
 
-            {/* Results - Only show if analysis has data */}
             {(analysis.length > 0 || allergens.length > 0) && (
               <motion.div 
                 ref={resultsRef}
-                initial={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="mt-8 space-y-6"
               >
-                {/* Ingredients Analysis */}
+                {/* Analysis Results */}
                 {analysis.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <h3 className="text-xl font-semibold text-white mb-4">Ingredients Analysis:</h3>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-4">Ingredient Analysis</h3>
                     <IngredientAnalysis results={analysis} />
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* Allergens */}
                 {allergens.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <h3 className="text-xl font-semibold text-white mb-4">Allergen Information:</h3>
-                    <div className="bg-red-900/50 rounded-lg p-4">
-                      <ul className="list-disc list-inside space-y-2">
-                        {allergens.map((allergen, index) => (
-                          <motion.li 
-                            key={index} 
-                            className="text-red-200"
-                            initial={{ opacity: 1 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            {allergen}
-                          </motion.li>
-                        ))}
-                      </ul>
-                    </div>
-                  </motion.div>
+                  <div className="bg-yellow-900/20 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-yellow-400 mb-2">Potential Allergens Detected</h3>
+                    <ul className="list-disc list-inside text-yellow-200">
+                      {allergens.map((allergen, index) => (
+                        <li key={index}>{allergen}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
 
-                {/* Nutritional Information */}
+                {/* Nutritional Info */}
                 {nutritionalInfo.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <h3 className="text-xl font-semibold text-white mb-4">Nutritional Information:</h3>
-                    <div className="bg-gray-700 rounded-lg p-4">
-                      <ul className="space-y-2">
-                        {nutritionalInfo.map((info, index) => (
-                          <motion.li 
-                            key={index} 
-                            className="text-gray-200"
-                            initial={{ opacity: 1 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            {info}
-                          </motion.li>
-                        ))}
-                      </ul>
-                    </div>
-                  </motion.div>
+                  <div className="bg-blue-900/20 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-blue-400 mb-2">Nutritional Information</h3>
+                    <ul className="list-none space-y-1 text-blue-200">
+                      {nutritionalInfo.map((info, index) => (
+                        <li key={index}>{info}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
 
-                {/* Developer Section - Hidden by default */}
-                {extractedText && (
-                  <motion.div 
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                    className="mt-8 border border-gray-700 rounded-lg overflow-hidden"
+                {/* Extracted Text Toggle */}
+                <div className="mt-4">
+                  <button
+                    onClick={toggleExtractedText}
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
                   >
-                    <motion.button 
-                      onClick={toggleExtractedText}
-                      className="w-full flex items-center justify-between bg-gray-700 p-4 text-left hover:bg-gray-600 transition-colors"
-                      whileHover={{ backgroundColor: 'rgba(75, 85, 99, 1)' }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Info className="h-5 w-5 text-emerald-400" />
-                        <span className="font-medium text-white">Developer Information</span>
-                      </div>
-                      <motion.div
-                        animate={{ rotate: showExtractedText ? 180 : 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {showExtractedText ? (
-                          <ChevronUp className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-gray-400" />
-                        )}
-                      </motion.div>
-                    </motion.button>
-                    
-                    {showExtractedText && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="p-4 bg-gray-800"
-                      >
-                        <div className="mb-4">
-                          <p className="text-gray-300 mb-2">
-                            This raw extracted text is helpful for developers to improve our OCR and text processing algorithms. 
-                            If you notice any issues with the analysis, please consider contributing to our project.
-                          </p>
-                          <motion.a
-                            href="https://github.com/techynAR/ingreSnap-EPICS336"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <Github className="h-4 w-4" />
-                            <span>Contribute on GitHub</span>
-                          </motion.a>
-                        </div>
-                        <div className="bg-gray-900 rounded p-3">
-                          <h4 className="text-sm font-medium text-gray-400 mb-2">Raw Extracted Text:</h4>
-                          <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto">
-                            {extractedText}
-                          </pre>
-                        </div>
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )}
+                    <Info className="h-4 w-4" />
+                    {showExtractedText ? 'Hide' : 'Show'} extracted text
+                    {showExtractedText ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                  {showExtractedText && (
+                    <div className="mt-2 p-4 bg-gray-700 rounded-lg">
+                      <pre className="text-gray-300 text-sm whitespace-pre-wrap">{extractedText}</pre>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
           </motion.div>
