@@ -2,6 +2,7 @@ import { AnalysisResult, IngredientData, ProcessedResult, TextSection } from '@/
 import { ingredientsDatabase } from '@/data/ingredients';
 import { findClosestMatch } from '@/utils/ingredientMatcher';
 import { extractTextSections } from '@/utils/textProcessing';
+import { GeminiService } from './geminiService';
 
 export async function analyzeIngredient(ingredient: string): Promise<AnalysisResult> {
   try {
@@ -23,7 +24,7 @@ export async function analyzeIngredient(ingredient: string): Promise<AnalysisRes
       };
     }
 
-    // Find closest match in database
+    // Try local database first
     const matchedIngredient = findClosestMatch(cleanedIngredient, ingredientsDatabase);
     
     if (matchedIngredient) {
@@ -34,28 +35,40 @@ export async function analyzeIngredient(ingredient: string): Promise<AnalysisRes
       };
     }
 
-    // Check for common allergens not in database
-    const commonAllergens = ['peanut', 'tree nut', 'milk', 'egg', 'wheat', 'soy', 'fish', 'shellfish'];
-    for (const allergen of commonAllergens) {
-      if (cleanedIngredient.includes(allergen)) {
-        return {
-          name: ingredient,
-          description: `This ingredient may contain ${allergen}, which is a common allergen.`,
-          category: 'food',
-          warnings: [`May contain ${allergen} allergen`],
-          safetyLevel: 'caution'
-        };
+    // If not found in local database, use Gemini API
+    try {
+      const geminiService = GeminiService.getInstance();
+      const analysis = await geminiService.analyzeIngredient(ingredient);
+      return {
+        name: ingredient,
+        ...analysis
+      };
+    } catch (error) {
+      console.error('Gemini analysis failed:', error);
+      
+      // Fallback to basic analysis
+      const commonAllergens = ['peanut', 'tree nut', 'milk', 'egg', 'wheat', 'soy', 'fish', 'shellfish'];
+      for (const allergen of commonAllergens) {
+        if (cleanedIngredient.includes(allergen)) {
+          return {
+            name: ingredient,
+            description: `This ingredient may contain ${allergen}, which is a common allergen.`,
+            category: 'food',
+            warnings: [`May contain ${allergen} allergen`],
+            safetyLevel: 'caution'
+          };
+        }
       }
-    }
 
-    // Default response for unknown ingredients
-    return {
-      name: ingredient,
-      description: 'This ingredient is not in our database. Consider consulting with a professional for more information.',
-      category: 'unknown',
-      warnings: ['Unknown ingredient - exercise caution'],
-      safetyLevel: 'caution'
-    };
+      // Default response for unknown ingredients
+      return {
+        name: ingredient,
+        description: 'This ingredient is not in our database. Consider consulting with a professional for more information.',
+        category: 'unknown',
+        warnings: ['Unknown ingredient - exercise caution'],
+        safetyLevel: 'caution'
+      };
+    }
   } catch (error) {
     console.error(`Error analyzing ingredient "${ingredient}":`, error);
     return {
@@ -74,13 +87,22 @@ export async function processText(text: string): Promise<ProcessedResult> {
       throw new Error('Empty text provided for processing');
     }
 
-    // Extract different sections from the text
-    const sections = extractTextSections(text);
+    // Clean up OCR text using Gemini
+    let cleanedText = text;
+    try {
+      const geminiService = GeminiService.getInstance();
+      cleanedText = await geminiService.cleanupOCRText(text);
+    } catch (error) {
+      console.error('Gemini OCR cleanup failed:', error);
+    }
+
+    // Extract different sections from the cleaned text
+    const sections = extractTextSections(cleanedText);
     
     // Validate extracted ingredients
     if (sections.ingredients.length === 0) {
       // If no ingredients were found, try to extract from the entire text
-      sections.ingredients = text
+      sections.ingredients = cleanedText
         .split(/[,;.]/)
         .map(item => item.trim())
         .filter(item => item.length > 2); // Filter out very short items
