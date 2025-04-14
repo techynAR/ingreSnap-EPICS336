@@ -2,16 +2,15 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class GeminiService {
   private static instance: GeminiService;
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  public model: any;
 
   private constructor() {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('Gemini API key is not configured');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    this.model = genAI.getGenerativeModel({ model: 'gemini-pro' });
   }
 
   public static getInstance(): GeminiService {
@@ -48,7 +47,10 @@ Example format:
   "safetyLevel": "caution"
 }`;
 
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent({
+        contents: [{ parts: [{ text: prompt }] }]
+      });
+      
       const response = await result.response;
       const text = response.text();
       
@@ -91,7 +93,10 @@ ${text}
 
 Return only the cleaned text, no explanations.`;
 
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent({
+        contents: [{ parts: [{ text: prompt }] }]
+      });
+      
       const response = await result.response;
       return response.text().trim();
     } catch (error) {
