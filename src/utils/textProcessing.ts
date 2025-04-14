@@ -3,8 +3,6 @@ import { parseIngredients } from './ingredientParser';
 
 export function extractTextSections(text: string): TextSection {
   try {
-    const normalized = text.toLowerCase();
-    
     const sections: TextSection = {
       ingredients: [],
       allergens: [],
@@ -12,30 +10,43 @@ export function extractTextSections(text: string): TextSection {
       otherText: []
     };
 
-    // Find the ingredients section starting point
-    const ingredientsStart = normalized.indexOf('ingredients');
-    if (ingredientsStart === -1) {
-      // If no "ingredients" found, try alternate spellings/formats
-      const alternateStarts = [
-        normalized.indexOf('ingred'),
-        normalized.indexOf('contains:'),
-        normalized.indexOf('contains ')
-      ].filter(index => index !== -1);
-
-      if (alternateStarts.length > 0) {
-        const startIndex = Math.min(...alternateStarts);
-        const textToProcess = normalized.slice(startIndex);
-        return processTextSections(textToProcess, sections);
-      }
-
-      // If no starting point found, return empty sections
+    // Find exact "INGREDIENTS:" text (case insensitive)
+    const ingredientsMatch = text.match(/ingredients:\s*(.*?)(?=(?:nutrition|allergen|contains|\n\n|$))/is);
+    
+    if (!ingredientsMatch) {
       return sections;
     }
 
-    // Process only the text after "ingredients"
-    const textToProcess = normalized.slice(ingredientsStart);
-    return processTextSections(textToProcess, sections);
+    // Get only the ingredients text
+    const ingredientsText = ingredientsMatch[1].trim();
+    
+    if (ingredientsText) {
+      // Split by commas, clean up each ingredient
+      sections.ingredients = ingredientsText
+        .split(/,(?![^(]*\))/) // Split by commas not inside parentheses
+        .map(ingredient => ingredient.trim())
+        .filter(ingredient => ingredient.length > 0);
+    }
 
+    // Extract allergens only if they're explicitly marked
+    const allergenMatch = text.match(/allergens?:?\s*(.*?)(?=(?:nutrition|ingredients|\n\n|$))/is);
+    if (allergenMatch?.[1]) {
+      sections.allergens = allergenMatch[1]
+        .split(/[,.]/)
+        .map(a => a.trim())
+        .filter(a => a.length > 0);
+    }
+
+    // Extract nutrition info only if it's explicitly marked
+    const nutritionMatch = text.match(/nutrition(?:al)?\s*(?:information|facts):?\s*(.*?)(?=(?:ingredients|allergen|\n\n|$))/is);
+    if (nutritionMatch?.[1]) {
+      sections.nutritionalInfo = nutritionMatch[1]
+        .split(/[\n\r]/)
+        .map(n => n.trim())
+        .filter(n => n.length > 0 && /\d/.test(n));
+    }
+
+    return sections;
   } catch (error) {
     console.error('Error extracting text sections:', error);
     return {
