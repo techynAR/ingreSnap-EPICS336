@@ -1,17 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from "@google/genai";
 
 export class GeminiService {
   private static instance: GeminiService;
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private ai: GoogleGenAI;
 
   private constructor() {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('Gemini API key is not configured');
+      throw new Error("Gemini API key is not configured");
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
   public static getInstance(): GeminiService {
@@ -23,9 +21,9 @@ export class GeminiService {
 
   public async analyzeIngredient(ingredient: string): Promise<{
     description: string;
-    category: 'food' | 'chemical' | 'unknown' | 'error';
+    category: "food" | "chemical" | "unknown" | "error";
     warnings: string[];
-    safetyLevel: 'safe' | 'caution' | 'warning' | 'unknown';
+    safetyLevel: "safe" | "caution" | "warning" | "unknown";
   }> {
     try {
       const prompt = `Analyze this food/cosmetic ingredient and provide detailed information in JSON format:
@@ -40,39 +38,40 @@ Provide:
 
 Format the response as a strict JSON object with these exact keys: description, category, warnings, safetyLevel`;
 
-      const result = await this.model.generateContent({
-        contents: [{ text: prompt }]
-      });
-      
-      const response = await result.response;
-      const text = response.text();
-      
-      // Extract JSON from the response
+      const model = this.ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text;
+
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error('Invalid response format');
+        throw new Error("Invalid response format");
       }
-      
+
       const analysis = JSON.parse(jsonMatch[0]);
-      
-      // Validate the response format
-      if (!analysis.description || !analysis.category || !Array.isArray(analysis.warnings) || !analysis.safetyLevel) {
-        throw new Error('Invalid response structure');
+
+      if (
+        !analysis.description ||
+        !analysis.category ||
+        !Array.isArray(analysis.warnings) ||
+        !analysis.safetyLevel
+      ) {
+        throw new Error("Invalid response structure");
       }
 
       return {
         description: analysis.description,
-        category: analysis.category as 'food' | 'chemical' | 'unknown' | 'error',
+        category: analysis.category as "food" | "chemical" | "unknown" | "error",
         warnings: analysis.warnings,
-        safetyLevel: analysis.safetyLevel as 'safe' | 'caution' | 'warning' | 'unknown'
+        safetyLevel: analysis.safetyLevel as "safe" | "caution" | "warning" | "unknown",
       };
     } catch (error) {
-      console.error('Gemini analysis error:', error);
+      console.error("Gemini analysis error:", error);
       return {
-        description: 'Unable to analyze this ingredient',
-        category: 'unknown',
-        warnings: ['Analysis failed'],
-        safetyLevel: 'unknown'
+        description: "Unable to analyze this ingredient",
+        category: "unknown",
+        warnings: ["Analysis failed"],
+        safetyLevel: "unknown",
       };
     }
   }
@@ -86,14 +85,12 @@ ${text}
 
 Return only the cleaned text, no explanations.`;
 
-      const result = await this.model.generateContent({
-        contents: [{ text: prompt }]
-      });
-      
-      const response = await result.response;
-      return response.text().trim();
+      const model = this.ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const result = await model.generateContent(prompt);
+      return result.response.text.trim();
     } catch (error) {
-      console.error('Gemini OCR cleanup error:', error);
+      console.error("Gemini OCR cleanup error:", error);
       return text;
     }
   }
