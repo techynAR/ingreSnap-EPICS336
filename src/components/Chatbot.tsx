@@ -48,10 +48,16 @@ const Chatbot = () => {
       else if (isGreeting(processedQuery)) {
         response = getGreetingResponse();
       }
-      // Try Gemini API or fall back to local responses
+      // Try Gemini API with better error handling
       else {
         try {
           const geminiService = GeminiService.getInstance();
+          
+          // Add error checking for API key
+          if (!import.meta.env.VITE_GEMINI_API_KEY) {
+            throw new Error('Gemini API key not configured');
+          }
+
           const prompt = {
             contents: [{
               parts: [{
@@ -63,11 +69,24 @@ User query: ${userMessage}`
           };
 
           const result = await geminiService.model.generateContent(prompt);
-          const apiResponse = await result.response;
-          response = apiResponse.text();
+          if (!result || !result.response) {
+            throw new Error('Empty response from Gemini API');
+          }
+          
+          response = result.response.text();
+          
+          // Validate response is not empty
+          if (!response || response.trim().length === 0) {
+            throw new Error('Empty response text from Gemini API');
+          }
         } catch (error) {
-          console.warn('Gemini API unavailable, using local response system');
-          response = findBestMatch(processedQuery, FAQ);
+          console.error('Gemini API error:', error);
+          // Only use fallback if it's a network or API error
+          if (error instanceof Error && error.message.includes('API')) {
+            response = findBestMatch(processedQuery, FAQ);
+          } else {
+            throw error; // Re-throw other errors
+          }
         }
       }
 
@@ -82,10 +101,9 @@ User query: ${userMessage}`
       }
     } catch (error) {
       console.error('Chat processing error:', error);
-      const fallbackResponse = findBestMatch(processQuery(userMessage), FAQ);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: fallbackResponse,
+        content: 'I apologize, but I encountered an error processing your request. Please try again.',
       }]);
     }
 
