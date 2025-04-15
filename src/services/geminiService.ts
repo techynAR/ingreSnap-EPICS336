@@ -2,15 +2,16 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class GeminiService {
   private static instance: GeminiService;
-  public model: any;
+  private genAI: GoogleGenerativeAI;
+  private model: any;
 
   private constructor() {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('Gemini API key is not configured');
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
   }
 
   public static getInstance(): GeminiService {
@@ -37,18 +38,10 @@ Provide:
 3. Any potential warnings or health considerations (as an array)
 4. Safety level (must be exactly one of: safe, caution, warning, unknown)
 
-Format the response as a strict JSON object with these exact keys: description, category, warnings, safetyLevel
-
-Example format:
-{
-  "description": "Natural sweetener derived from sugar cane",
-  "category": "food",
-  "warnings": ["May affect blood sugar levels", "Not suitable for diabetics"],
-  "safetyLevel": "caution"
-}`;
+Format the response as a strict JSON object with these exact keys: description, category, warnings, safetyLevel`;
 
       const result = await this.model.generateContent({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ text: prompt }]
       });
       
       const response = await result.response;
@@ -94,7 +87,7 @@ ${text}
 Return only the cleaned text, no explanations.`;
 
       const result = await this.model.generateContent({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ text: prompt }]
       });
       
       const response = await result.response;
