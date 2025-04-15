@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.8.0",
     "@google/generative-ai": "^0.2.1",
     "@lottiefiles/dotlottie-react": "^0.2.2",
     "@vercel/analytics": "^1.4.1",

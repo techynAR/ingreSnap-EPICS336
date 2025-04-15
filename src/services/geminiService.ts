@@ -1,8 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export class GeminiService {
   private static instance: GeminiService;
-  private ai: GoogleGenAI;
+  private ai: GoogleGenerativeAI;
   public model: any;
 
   private constructor() {
@@ -10,7 +10,7 @@ export class GeminiService {
     if (!apiKey) {
       throw new Error("Gemini API key is not configured");
     }
-    this.ai = new GoogleGenAI({ apiKey });
+    this.ai = new GoogleGenerativeAI(apiKey);
     this.model = this.ai.getGenerativeModel({ model: "gemini-pro" });
   }
 
