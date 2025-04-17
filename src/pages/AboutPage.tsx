@@ -84,7 +84,7 @@ const AboutPage = () => {
       name: "Vikash Kumar Singh",
       role: "Developer",
       department: "B.Tech CSE Cybersecurity Specialization",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/vikash-kumar-singh-62a948251/",
       avatar: "/placeholder-avatar.png"
     }
   ];
