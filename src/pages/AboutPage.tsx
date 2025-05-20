@@ -49,7 +49,7 @@ const AboutPage = () => {
       name: "Fanish Kumar Diwan",
       role: "Developer",
       department: "B.Tech CSE Cybersecurity Specialization",
-      linkedin: "",
+      linkedin: "https://linkedin.com/in/fanish-diwan-074226339",
       avatar: "/placeholder-avatar.png"
     },
     {
