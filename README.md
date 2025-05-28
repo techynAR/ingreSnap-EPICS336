@@ -14,7 +14,7 @@ We are a dynamic team of multidisciplinary engineering students from VIT Bhopal 
 - **Fanish Kumar Diwan** - B.Tech CSE Cybersecurity Specialization  
 - **[Krishna Teja](https://www.linkedin.com/in/teja-krishna-0778a0279/)** - B.Tech CSE Core  
 - **Niranjan Kumar Chaurasiya** - B.Tech CSE Core  
-- **Sameer Kumar** - B.Tech CSE Core  
+- **[Sameer Kumar](https://www.linkedin.com/in/sameer-kumar-095749249/)** - B.Tech CSE Core  
 - **[Sreemukhi Kunche](https://www.linkedin.com/in/sreemukhi-kunche-8a0b1624a)** - B.Tech CSE AI Specialization  
 - **[Vikash Kumar Singh](https://www.linkedin.com/in/vikash-kumar-singh-62a948251/)** - B.Tech CSE Cybersecurity Specialization  
 
